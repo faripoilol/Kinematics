@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kinematics</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5f6c7b;
+      --line: #d9e0e8;
+      --axis: #718096;
+      --focus: #111827;
+      --a: #0f766e;
+      --v: #1d4ed8;
+      --x: #b45309;
+      --shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100%;
+      width: 100%;
+      padding: 22px;
+      overflow-x: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      width: 100%;
+      min-width: 0;
+      max-width: 1500px;
+      margin: 0 auto 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.65rem, 2.4vw, 2.35rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .equations {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .equations span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.68);
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .time-window {
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .reset-button {
+      min-height: 36px;
+      padding: 7px 13px;
+      border: 1px solid #c7d0da;
+      border-radius: 8px;
+      background: #17202a;
+      color: #ffffff;
+      cursor: pointer;
+    }
+
+    .reset-button:focus-visible {
+      outline: 3px solid rgba(17, 24, 39, 0.28);
+      outline-offset: 2px;
+    }
+
+    .graphs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+      min-width: 0;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      display: flex;
+      min-width: 0;
+      width: 100%;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      min-width: 0;
+      padding: 15px 15px 10px;
+      border-bottom: 1px solid #edf1f5;
+    }
+
+    .panel-head > * {
+      min-width: 0;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 1.02rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .formula {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .value-control {
+      display: grid;
+      grid-template-columns: auto minmax(78px, 96px) auto;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .value-control input {
+      width: 100%;
+      min-width: 0;
+      height: 34px;
+      border: 1px solid #cbd5df;
+      border-radius: 7px;
+      padding: 4px 7px;
+      color: var(--ink);
+      background: #ffffff;
+      text-align: right;
+    }
+
+    .value-control input:focus {
+      outline: 3px solid rgba(29, 78, 216, 0.18);
+      border-color: #7da0e8;
+    }
+
+    .chart {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      aspect-ratio: 1.28 / 1;
+      display: block;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .plot-bg {
+      fill: #fbfcfd;
+    }
+
+    .grid-line {
+      stroke: #e5eaf0;
+      stroke-width: 1;
+      shape-rendering: crispEdges;
+    }
+
+    .axis-line {
+      stroke: var(--axis);
+      stroke-width: 1.5;
+      shape-rendering: crispEdges;
+    }
+
+    .tick-text {
+      fill: #697586;
+      font-size: 12px;
+    }
+
+    .axis-title {
+      fill: #465365;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .curve {
+      fill: none;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .fatpoint-control {
+      cursor: ns-resize;
+      outline: none;
+    }
+
+    .fatpoint-control:focus-visible .fatpoint-halo {
+      stroke: var(--focus);
+      stroke-opacity: 0.38;
+      stroke-width: 7;
+    }
+
+    .fatpoint-halo {
+      fill: none;
+      stroke: #ffffff;
+      stroke-width: 8;
+      stroke-opacity: 0.95;
+    }
+
+    .fatpoint {
+      stroke: #ffffff;
+      stroke-width: 4;
+      filter: drop-shadow(0 3px 5px rgba(15, 23, 42, 0.28));
+    }
+
+    .value-tag {
+      fill: #ffffff;
+      stroke: #d7dee7;
+      stroke-width: 1;
+    }
+
+    .value-tag-text {
+      fill: #1f2937;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .clip-edge {
+      stroke: #cbd5df;
+      stroke-width: 1;
+      stroke-dasharray: 5 5;
+    }
+
+    @media (max-width: 1050px) {
+      .graphs {
+        grid-template-columns: 1fr;
+      }
+
+      .chart {
+        aspect-ratio: 1.7 / 1;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .app {
+        padding: 14px;
+      }
+
+      .topbar {
+        display: block;
+      }
+
+      .toolbar {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .equations {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .equations span {
+        width: fit-content;
+      }
+
+      .panel-head {
+        grid-template-columns: 1fr;
+      }
+
+      .value-control {
+        grid-template-columns: 32px minmax(0, 1fr) 50px;
+      }
+
+      .chart {
+        aspect-ratio: 1.18 / 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>Kinematics</h1>
+        <p class="equations" aria-label="Equations">
+          <span>a(t) = a0</span>
+          <span>v(t) = V0 + a0t</span>
+          <span>x(t) = x0 + V0t + 0.5a0t^2</span>
+        </p>
+      </div>
+      <div class="toolbar">
+        <span class="time-window">t: 0..20 s</span>
+        <button class="reset-button" id="reset" type="button">Reset</button>
+      </div>
+    </header>
+
+    <main class="graphs" aria-label="Kinematics graphs">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Acceleration</h2>
+            <span class="formula">a(t) = a0</span>
+          </div>
+          <label class="value-control" for="input-a0">
+            <span>a0</span>
+            <input id="input-a0" name="a0" type="number" min="-8" max="8" step="0.1" inputmode="decimal">
+            <span>m/s^2</span>
+          </label>
+        </div>
+        <svg class="chart" id="chart-acceleration" role="img" aria-label="Acceleration against time"></svg>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Velocity</h2>
+            <span class="formula">v(t) = V0 + a0t</span>
+          </div>
+          <label class="value-control" for="input-v0">
+            <span>V0</span>
+            <input id="input-v0" name="v0" type="number" min="-60" max="60" step="0.5" inputmode="decimal">
+            <span>m/s</span>
+          </label>
+        </div>
+        <svg class="chart" id="chart-velocity" role="img" aria-label="Velocity against time"></svg>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Coords</h2>
+            <span class="formula">x(t) = x0 + V0t + 0.5a0t^2</span>
+          </div>
+          <label class="value-control" for="input-x0">
+            <span>x0</span>
+            <input id="input-x0" name="x0" type="number" min="-500" max="500" step="1" inputmode="decimal">
+            <span>m</span>
+          </label>
+        </div>
+        <svg class="chart" id="chart-coords" role="img" aria-label="Coordinates against time"></svg>
+      </article>
+    </main>
+  </div>
+
+  <script>
+    const NS = "http://www.w3.org/2000/svg";
+    const T_MAX = 20;
+    const viewBox = {
+      width: 640,
+      height: 500,
+      left: 70,
+      right: 24,
+      top: 26,
+      bottom: 58
+    };
+
+    const defaults = {
+      a0: 1.5,
+      v0: 7,
+      x0: 0
+    };
+
+    const state = { ...defaults };
+
+    const graphs = [
+      {
+        id: "acceleration",
+        svgId: "chart-acceleration",
+        inputId: "input-a0",
+        param: "a0",
+        paramLabel: "a0",
+        unit: "m/s^2",
+        color: getCss("--a"),
+        yMin: -8,
+        yMax: 8,
+        ticks: [-8, -4, 0, 4, 8],
+        step: 0.1,
+        valueAt: () => state.a0
+      },
+      {
+        id: "velocity",
+        svgId: "chart-velocity",
+        inputId: "input-v0",
+        param: "v0",
+        paramLabel: "V0",
+        unit: "m/s",
+        color: getCss("--v"),
+        yMin: -60,
+        yMax: 60,
+        ticks: [-60, -30, 0, 30, 60],
+        step: 0.5,
+        valueAt: (t) => state.v0 + state.a0 * t
+      },
+      {
+        id: "coords",
+        svgId: "chart-coords",
+        inputId: "input-x0",
+        param: "x0",
+        paramLabel: "x0",
+        unit: "m",
+        color: getCss("--x"),
+        yMin: -500,
+        yMax: 500,
+        ticks: [-500, -250, 0, 250, 500],
+        step: 1,
+        valueAt: (t) => state.x0 + state.v0 * t + 0.5 * state.a0 * t * t
+      }
+    ];
+
+    const graphByParam = new Map(graphs.map((graph) => [graph.param, graph]));
+    const inputs = new Map();
+    let activeDrag = null;
+
+    function getCss(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function plotWidth() {
+      return viewBox.width - viewBox.left - viewBox.right;
+    }
+
+    function plotHeight() {
+      return viewBox.height - viewBox.top - viewBox.bottom;
+    }
+
+    function xForTime(t) {
+      return viewBox.left + (t / T_MAX) * plotWidth();
+    }
+
+    function yForValue(value, graph) {
+      const normalized = (graph.yMax - value) / (graph.yMax - graph.yMin);
+      return viewBox.top + normalized * plotHeight();
+    }
+
+    function valueForY(y, graph) {
+      const normalized = (y - viewBox.top) / plotHeight();
+      return graph.yMax - normalized * (graph.yMax - graph.yMin);
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function roundToStep(value, step) {
+      return Math.round(value / step) * step;
+    }
+
+    function formatNumber(value) {
+      const clean = Math.abs(value) < 0.0001 ? 0 : value;
+      if (Math.abs(clean) >= 100) return clean.toFixed(0);
+      if (Math.abs(clean) >= 10) return clean.toFixed(1);
+      return clean.toFixed(2);
+    }
+
+    function createSvgElement(name, attrs = {}) {
+      const element = document.createElementNS(NS, name);
+      for (const [key, value] of Object.entries(attrs)) {
+        element.setAttribute(key, value);
+      }
+      return element;
+    }
+
+    function add(parent, name, attrs = {}) {
+      const element = createSvgElement(name, attrs);
+      parent.appendChild(element);
+      return element;
+    }
+
+    function addText(parent, text, attrs = {}) {
+      const element = add(parent, "text", attrs);
+      element.textContent = text;
+      return element;
+    }
+
+    function curvePath(graph) {
+      const steps = 120;
+      let path = "";
+      for (let i = 0; i <= steps; i += 1) {
+        const t = (T_MAX * i) / steps;
+        const x = xForTime(t);
+        const y = yForValue(graph.valueAt(t), graph);
+        path += `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)} `;
+      }
+      return path.trim();
+    }
+
+    function renderGrid(svg, graph, clipId) {
+      const left = viewBox.left;
+      const right = viewBox.width - viewBox.right;
+      const top = viewBox.top;
+      const bottom = viewBox.height - viewBox.bottom;
+
+      add(svg, "rect", {
+        class: "plot-bg",
+        x: left,
+        y: top,
+        width: plotWidth(),
+        height: plotHeight()
+      });
+
+      for (let t = 0; t <= T_MAX; t += 2) {
+        const x = xForTime(t);
+        add(svg, "line", {
+          class: "grid-line",
+          x1: x,
+          x2: x,
+          y1: top,
+          y2: bottom
+        });
+
+        if (t === 0 || t === 10 || t === 20) {
+          addText(svg, String(t), {
+            class: "tick-text",
+            x,
+            y: bottom + 26,
+            "text-anchor": "middle"
+          });
+        }
+      }
+
+      for (const tick of graph.ticks) {
+        const y = yForValue(tick, graph);
+        add(svg, "line", {
+          class: "grid-line",
+          x1: left,
+          x2: right,
+          y1: y,
+          y2: y
+        });
+        addText(svg, formatTick(tick), {
+          class: "tick-text",
+          x: left - 10,
+          y: y + 4,
+          "text-anchor": "end"
+        });
+      }
+
+      add(svg, "line", {
+        class: "axis-line",
+        x1: left,
+        x2: left,
+        y1: top,
+        y2: bottom
+      });
+
+      add(svg, "line", {
+        class: "axis-line",
+        x1: left,
+        x2: right,
+        y1: yForValue(0, graph),
+        y2: yForValue(0, graph)
+      });
+
+      add(svg, "line", {
+        class: "clip-edge",
+        x1: right,
+        x2: right,
+        y1: top,
+        y2: bottom
+      });
+
+      addText(svg, "time, s", {
+        class: "axis-title",
+        x: right,
+        y: bottom + 42,
+        "text-anchor": "end"
+      });
+
+      addText(svg, graph.unit, {
+        class: "axis-title",
+        x: left,
+        y: 16,
+        "text-anchor": "middle"
+      });
+
+      const defs = add(svg, "defs");
+      const clipPath = add(defs, "clipPath", { id: clipId });
+      add(clipPath, "rect", {
+        x: left,
+        y: top,
+        width: plotWidth(),
+        height: plotHeight()
+      });
+    }
+
+    function formatTick(value) {
+      return Number.isInteger(value) ? String(value) : value.toFixed(1);
+    }
+
+    function renderCurve(svg, graph, clipId) {
+      add(svg, "path", {
+        class: "curve",
+        d: curvePath(graph),
+        stroke: graph.color,
+        "clip-path": `url(#${clipId})`
+      });
+    }
+
+    function renderHandle(svg, graph) {
+      const rawValue = state[graph.param];
+      const value = clamp(rawValue, graph.yMin, graph.yMax);
+      const x = viewBox.left;
+      const y = yForValue(value, graph);
+      const label = `${graph.paramLabel} = ${formatNumber(rawValue)}`;
+      const tagX = x + 18;
+      const tagY = clamp(y - 15, viewBox.top + 3, viewBox.height - viewBox.bottom - 31);
+
+      const group = add(svg, "g", {
+        class: "fatpoint-control",
+        tabindex: "0",
+        role: "slider",
+        "aria-label": graph.paramLabel,
+        "aria-valuemin": graph.yMin,
+        "aria-valuemax": graph.yMax,
+        "aria-valuenow": formatNumber(rawValue),
+        "data-param": graph.param
+      });
+
+      add(group, "title").textContent = `${graph.paramLabel}: ${formatNumber(rawValue)} ${graph.unit}`;
+      add(group, "circle", {
+        class: "fatpoint-halo",
+        cx: x,
+        cy: y,
+        r: 16
+      });
+      add(group, "circle", {
+        class: "fatpoint",
+        cx: x,
+        cy: y,
+        r: 12,
+        fill: graph.color
+      });
+
+      add(svg, "rect", {
+        class: "value-tag",
+        x: tagX,
+        y: tagY,
+        width: Math.max(76, label.length * 7.2),
+        height: 28,
+        rx: 7
+      });
+      addText(svg, label, {
+        class: "value-tag-text",
+        x: tagX + 9,
+        y: tagY + 18
+      });
+    }
+
+    function renderGraph(graph) {
+      const svg = document.getElementById(graph.svgId);
+      const clipId = `clip-${graph.id}`;
+      svg.setAttribute("viewBox", `0 0 ${viewBox.width} ${viewBox.height}`);
+      svg.replaceChildren();
+
+      renderGrid(svg, graph, clipId);
+      renderCurve(svg, graph, clipId);
+      renderHandle(svg, graph);
+    }
+
+    function renderAll(preserveInputParam = null) {
+      for (const graph of graphs) {
+        renderGraph(graph);
+        const input = inputs.get(graph.param);
+        if (graph.param !== preserveInputParam) {
+          input.value = formatNumber(state[graph.param]);
+        }
+      }
+    }
+
+    function setParam(param, value, options = {}) {
+      const graph = graphByParam.get(param);
+      const rounded = roundToStep(clamp(value, graph.yMin, graph.yMax), graph.step);
+      state[param] = Number(rounded.toFixed(6));
+      renderAll(options.preserveInputParam);
+    }
+
+    function svgPoint(svg, event) {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function updateFromPointer(event) {
+      if (!activeDrag) return;
+      const point = svgPoint(activeDrag.svg, event);
+      const value = valueForY(point.y, activeDrag.graph);
+      setParam(activeDrag.graph.param, value);
+    }
+
+    function handleKey(event) {
+      const control = event.target.closest(".fatpoint-control");
+      if (!control) return;
+
+      const graph = graphByParam.get(control.dataset.param);
+      const current = state[graph.param];
+      const multiplier = event.shiftKey ? 10 : 1;
+      let next = current;
+
+      if (event.key === "ArrowUp" || event.key === "ArrowRight") {
+        next += graph.step * multiplier;
+      } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
+        next -= graph.step * multiplier;
+      } else if (event.key === "PageUp") {
+        next += graph.step * 10;
+      } else if (event.key === "PageDown") {
+        next -= graph.step * 10;
+      } else if (event.key === "Home") {
+        next = graph.yMin;
+      } else if (event.key === "End") {
+        next = graph.yMax;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      setParam(graph.param, next);
+      const latest = document.querySelector(`.fatpoint-control[data-param="${graph.param}"]`);
+      if (latest) latest.focus();
+    }
+
+    function wireInputs() {
+      for (const graph of graphs) {
+        const input = document.getElementById(graph.inputId);
+        inputs.set(graph.param, input);
+        input.addEventListener("input", () => {
+          const value = Number.parseFloat(input.value);
+          if (Number.isFinite(value)) {
+            setParam(graph.param, value, { preserveInputParam: graph.param });
+          }
+        });
+        input.addEventListener("blur", () => {
+          input.value = formatNumber(state[graph.param]);
+        });
+      }
+    }
+
+    document.addEventListener("pointerdown", (event) => {
+      const control = event.target.closest(".fatpoint-control");
+      if (!control) return;
+      const graph = graphByParam.get(control.dataset.param);
+      activeDrag = {
+        graph,
+        svg: document.getElementById(graph.svgId)
+      };
+      event.preventDefault();
+      updateFromPointer(event);
+    });
+
+    window.addEventListener("pointermove", (event) => {
+      updateFromPointer(event);
+    });
+
+    window.addEventListener("pointerup", () => {
+      activeDrag = null;
+    });
+
+    document.addEventListener("keydown", handleKey);
+
+    document.getElementById("reset").addEventListener("click", () => {
+      Object.assign(state, defaults);
+      renderAll();
+    });
+
+    wireInputs();
+    renderAll();
+  </script>
+</body>
+</html>
